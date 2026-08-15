@@ -1,4 +1,4 @@
-# data_fetcher.py - ALTERNATIVE API VERSION
+# data_fetcher.py - COMPLETE ALTERNATIVE API VERSION
 import requests
 from datetime import datetime
 import json
@@ -24,31 +24,29 @@ class DataFetcher:
     
     def _fetch_all(self):
         try:
-            # 1. BTC Price - CoinGecko (Always works)
+            # ===== BTC PRICE - CoinGecko (ALWAYS WORKS) =====
             print("📊 Fetching BTC Price from CoinGecko...")
-            try:
-                price_resp = requests.get(
-                    'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
-                    timeout=10,
-                    headers={'User-Agent': 'Mozilla/5.0'}
-                )
-                if price_resp.status_code == 200:
-                    btc_price = float(price_resp.json()['bitcoin']['usd'])
-                    print(f"✅ BTC (CoinGecko): ${btc_price}")
-                else:
-                    raise Exception("CoinGecko failed")
-            except:
+            price_resp = requests.get(
+                'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+                timeout=15,
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+            
+            if price_resp.status_code == 200:
+                btc_price = float(price_resp.json()['bitcoin']['usd'])
+                print(f"✅ BTC: ${btc_price}")
+            else:
                 # Fallback to CoinCap
                 print("📊 Fallback to CoinCap...")
                 price_resp = requests.get(
                     'https://api.coincap.io/v2/assets/bitcoin',
-                    timeout=10
+                    timeout=15
                 )
                 price_resp.raise_for_status()
                 btc_price = float(price_resp.json()['data']['priceUsd'])
                 print(f"✅ BTC (CoinCap): ${btc_price}")
             
-            # 2. Funding Rate - Fallback
+            # ===== FUNDING RATE - From Binance (May fail) =====
             print("📊 Fetching Funding Rate...")
             try:
                 funding_resp = requests.get(
@@ -72,7 +70,7 @@ class DataFetcher:
                 funding_time = int(time.time() * 1000)
             print(f"✅ Funding Rate: {funding_rate}")
             
-            # 3. Open Interest - Fallback
+            # ===== OPEN INTEREST - From Binance (May fail) =====
             print("📊 Fetching Open Interest...")
             try:
                 oi_resp = requests.get(
@@ -89,7 +87,7 @@ class DataFetcher:
                 open_interest = 0
             print(f"✅ OI: {open_interest}")
             
-            # 4. Fear & Greed - Always works
+            # ===== FEAR & GREED - alternative.me (ALWAYS WORKS) =====
             print("📊 Fetching Fear & Greed...")
             fng_resp = requests.get(
                 'https://api.alternative.me/fng/?limit=1',
