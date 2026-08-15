@@ -1,79 +1,64 @@
-# app.py
+# app.py - FINAL WITH 5m & 15m DISPLAY
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from webhook_handler import app
 import schedule
 import time
 import threading
 from datetime import datetime
 from data_fetcher import DataFetcher
+from signal_engine import SignalEngine
 from webhook_handler import WebhookHandler
 
-def safe_format(value, format_str="{}"):
-    if value is None:
-        return "N/A"
+def generate_signal_update():
+    print(f"⏰ Signal update at {datetime.now()}")
     try:
-        return format_str.format(value)
-    except:
-        return str(value)
-
-def scheduled_data_push():
-    print(f"⏰ Scheduled run at {datetime.now()}")
-    
-    fetcher = DataFetcher()
-    data = fetcher.fetch_all_data()
-    
-    handler = WebhookHandler()
-    handler.send_to_tradingview(data)
-    
-    btc = data.get('btc_price')
-    btc_str = safe_format(btc, "${:,.2f}") if btc else "N/A"
-    
-    funding = data.get('funding_rate', {})
-    funding_str = safe_format(funding.get('rate') if funding else None)
-    
-    oi = data.get('open_interest', {})
-    oi_value = oi.get('value') if oi else None
-    oi_str = safe_format(oi_value, "{:,.0f}") if oi_value else "N/A"
-    
-    fng = data.get('fear_greed', {})
-    fng_str = safe_format(fng.get('value') if fng else None)
-    
-    high = data.get('high_24h')
-    low = data.get('low_24h')
-    high_str = safe_format(high, "${:,.2f}") if high else "N/A"
-    low_str = safe_format(low, "${:,.2f}") if low else "N/A"
-    
-    message = f"""
-🔄 <b>Scheduled Update</b>
-📊 BTC: {btc_str}
-📈 Funding: {funding_str}
-💰 OI: {oi_str}
-😱 F&G: {fng_str}
-📈 24h High: {high_str}
-📉 24h Low: {low_str}
-⏰ {datetime.now().strftime('%H:%M:%S')}
-    """
-    handler.send_telegram_alert(message)
+        fetcher = DataFetcher()
+        data = fetcher.fetch_all_data()
+        if data.get('status') == 'error':
+            print("⚠️ Data fetch failed")
+            return
+        
+        engine = SignalEngine()
+        signal = engine.analyze(data)
+        
+        handler = WebhookHandler()
+        handler.send_signal_alert(data, signal)
+        
+        # Display with 5m & 15m info
+        ind = signal.indicators
+        print(f"📊 {signal.signal_type} ({signal.strength}/10)")
+        print(f"   RSI: 1m={ind.get('rsi_1m', 50):.1f} | 5m={ind.get('rsi_5m', 50):.1f} | 15m={ind.get('rsi_15m', 50):.1f}")
+        print(f"   MACD: {ind.get('macd_signal', 'N/A')}")
+        print(f"   CVD: {ind.get('cvd_signal', 'N/A')}")
+        print(f"   RR: {signal.risk_reward:.2f}")
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
 
 def start_scheduler():
-    print("🚀 Scheduler started - Data push every 5 minutes")
-    schedule.every(5).minutes.do(scheduled_data_push)
+    print("🚀 Scheduler started")
+    schedule.every(5).minutes.do(generate_signal_update)
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 if __name__ == '__main__':
-    scheduler_thread = threading.Thread(target=start_scheduler, daemon=True)
-    scheduler_thread.start()
+    threading.Thread(target=start_scheduler, daemon=True).start()
     
-    print("=" * 50)
-    print("🚀 CRYPTO DATA AGGREGATOR - REAL FUTURES DATA")
-    print("=" * 50)
-    print("📡 Flask API: http://localhost:5000")
-    print("📊 Data: http://localhost:5000/data/latest")
-    print("⏰ Scheduler: Every 5 minutes")
-    print("✅ Funding Rate: REAL")
-    print("✅ Open Interest: REAL")
-    print("✅ Price: REAL")
-    print("=" * 50)
+    print("=" * 60)
+    print("🚀 INSTITUTIONAL GRADE SIGNAL ENGINE v4.0")
+    print("=" * 60)
+    print("📡 Dashboard: http://localhost:5000")
+    print("📊 Data API: http://localhost:5000/data/latest")
+    print("📈 Signal API: http://localhost:5000/signal")
+    print("✅ TIMEFRAMES: 1m | 5m | 15m | 1h | 4h")
+    print("✅ RSI: Multi-Timeframe Confirmation")
+    print("✅ MACD: Multi-Timeframe Confirmation")
+    print("✅ CVD: Added")
+    print("✅ Dynamic Funding: Z-Score based")
+    print("=" * 60)
     
     app.run(host='0.0.0.0', port=5000, debug=False)
